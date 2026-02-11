@@ -21,9 +21,8 @@ class Controller
         $this->database = $database;
     }
 
-
-    public function run(): void {
-    
+    public function run(): void
+    {
         $requestMethod = $_SERVER['REQUEST_METHOD'];
         $requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -57,4 +56,44 @@ class Controller
 </body>
 </html>';
     }
+
+    private function showViewError(string $viewName, string $viewPath): void
+    {
+        http_response_code(500);
+        echo '<!DOCTYPE html>
+<html lang="fr">
+    ...
+    <h1>Erreur 500</h1>
+    <h2>Vue introuvable</h2>
+    ...
+</html>';
+    }
+
+    protected function render(string $view, array $variables = []): void
+    {
+        $viewFile = $this->viewPath . $view . '.html.php';
+        $templateFile = $this->viewPath . $this->template . '.html.php';
+
+        if (!file_exists($viewFile)) {
+            $this->showViewError($view, $viewFile);
+            return;
+        }
+
+        if (!file_exists($templateFile)) {
+            $this->showViewError($this->template, $templateFile);
+            return;
+        }
+
+        ob_start();
+        extract($variables);
+        require ($viewFile);
+        $content = ob_get_clean();
+        require ($templateFile);
+    }
+
+    protected function redirect(string $url): void
+{
+    header('Location: ' . $url);
+    exit();
+}
 }
