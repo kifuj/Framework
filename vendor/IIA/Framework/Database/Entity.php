@@ -84,7 +84,47 @@ public function getAll(array $conditions = [], array $order = [], int $limit = 0
         return self::toSnakeCase($className);
     }
     
-
+    public function save(): bool
+    {
+        $pdo = $this->database->getPDO();
+        $data = get_object_vars($this);
+        
+        unset($data['database']);
+        unset($data['table']);
+        unset($data['id']);
+        
+        if (isset($this->id) && $this->id > 0) {
+            $sets = [];
+            foreach ($data as $column => $value) {
+                $sets[] = $column . " = " . $pdo->quote($value);
+            }
+            
+            $sql = "UPDATE " . $this->table . " SET " . implode(', ', $sets) . " WHERE id = " . $this->id;
+            $result = $pdo->exec($sql);
+            
+            if ($result !== false) {
+                return true;
+            }
+            return false;
+        } else {
+            $columns = [];
+            $values = [];
+            
+            foreach ($data as $column => $value) {
+                $columns[] = $column;
+                $values[] = $pdo->quote($value);
+            }
+            
+            $sql = "INSERT INTO " . $this->table . " (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")";
+            $result = $pdo->exec($sql);
+            
+            if ($result !== false) {
+                $this->id = (int) $pdo->lastInsertId();
+                return true;
+            }
+            return false;
+        }
+    }
     public static function setTableName(string $name): void
     {
         static::$tableName = $name;
