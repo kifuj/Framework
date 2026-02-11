@@ -19,15 +19,54 @@ class Entity
         return $this->id;
     }
 
-    public function getAll( string $condition = none , string $order = none , int $lim = none): array
+public function getAll(array $conditions = [], array $order = [], int $limit = 0): array
     {
-        return $this->database->query("SELECT * FROM " . $this->table . "WHERE" . $condition . "ORDER BY" . $order . "LIMIT" . $lim , static::class);
+        $sql = "SELECT * FROM " . $this->table;
+        $params = [];
+        
+        if (!empty($conditions)) {
+            $whereClauses = [];
+            foreach ($conditions as $column => $value) {
+                if (is_array($value)) {
+                    foreach ($value as $operator => $val) {
+                        $paramName = ":{$column}";
+                        $whereClauses[] = "{$column} {$operator} {$paramName}";
+                        $params[$paramName] = $val;
+                    }
+                } else {
+                    $paramName = ":{$column}";
+                    $whereClauses[] = "{$column} = {$paramName}";
+                    $params[$paramName] = $value;
+                }
+            }
+            $sql .= " WHERE " . implode(" AND ", $whereClauses);
+        }
+        
+        if (!empty($order)) {
+            $orderClauses = [];
+            foreach ($order as $column => $direction) {
+                $orderClauses[] = "{$column} {$direction}";
+            }
+            $sql .= " ORDER BY " . implode(", ", $orderClauses);
+        }
+        
+        if ($limit > 0) {
+            $sql .= " LIMIT {$limit}";
+        }
+        
+        return $this->database->query($sql . $params , static::class, );
     }
 
         public function getOne(int $ids): array
     {
         return $this->database->query("SELECT * FROM " . $this->table . "WHERE" . $ids, static::class);
     }
+
+    public function delete(): array
+    {
+        return $this->database->query("DELETE * FROM " . $this->table . " WHERE id = :id");
+    }
+
     public function __get(string $key)
     {
         $method = 'get' . ucfirst($key);
